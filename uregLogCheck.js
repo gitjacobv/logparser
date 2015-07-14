@@ -6,6 +6,9 @@ var program = require('commander');
 var path;
 var filename;
 var mode;
+var text;
+var csv;
+var unhandlederrors;
 
 async.series([
   function(cb){
@@ -14,8 +17,9 @@ async.series([
     path = './';
     filename = 'api';
     mode = 'error';
-    text = 'output.txt';
-    csv = 'output.csv';
+    text = undefined;
+    csv = undefined;
+    unhandlederrors = false;
 
     program
     .version('0.0.1')
@@ -23,8 +27,9 @@ async.series([
     .option('-p, --path <value>', 'Path to files (default current directory)')
     .option('-f, --filename <value>', 'Filename (default api)')
     .option('-m, --mode <value>', 'Mode (default err) [error, success]')
-    .option('-t, --text <value>', 'Filename for text output (default output.txt)')
-    .option('-c, --csv <value>', 'Filename for csv output (default output.csv)')
+    .option('-t, --text [value]', 'Filename for text output (default output.txt)')
+    .option('-c, --csv [value]', 'Filename for csv output (default output.csv)')
+    .option('-u, --unhandlederrors', 'Include unhandled errors in printing and output (default not included)')
     .parse(process.argv);
 
     if(program.path) path = program.path;
@@ -32,16 +37,20 @@ async.series([
     if(program.mode) mode = program.mode;
 
     if(program.text){
-      if(!((typeof program.text) == 'boolean')){
+      text = 'output.txt';
+      if((typeof program.text) == 'string'){
         text = program.text
       }
     }
 
     if(program.csv){
-      if(!((typeof program.csv) == 'boolean')){
+      csv = 'output.csv';
+      if((typeof program.csv) == 'string'){
         csv = program.csv;
       }
     }
+
+    if(program.unhandlederrors) unhandlederrors = true;
 
     cb();
   },
@@ -132,21 +141,22 @@ async.series([
             if(foundErr){
               uregErrorCount++;
             }
-            //printing unhandlded errors
-            // else{
-            //
-            //    var split = logList[i].trim().split('\n', 2);
-            //
-            //    if(!(split[0] in unhandled)){
-            //      unhandled[split[0]] = true;
-            //     }
-            // }
+            //adding unhandled errors
+            else if(!foundErr && unhandlederrors){
+
+                var split = logList[i].trim().split('\n', 2);
+
+                if(!(split[0] in unhandled)){
+                  unhandled[split[0]] = true;
+                 }
+            }
 
           }
           callback();
         });
       }, function done(){
 
+        //results console logs
         console.log('\n');
 
         console.log('Total Ureg.inquirePromoRecurring --> ' + apiCount[0]);
@@ -166,14 +176,18 @@ async.series([
         console.log('Number of log entries: ', totalLogs);
         console.log('Number of ureg errors: ', uregErrorCount);
 
-        console.log('\nUnhandled Errors Requests\n');
+        //unhandled error console logs
+        if(unhandlederrors){
+          console.log('\nUnhandled Errors Requests\n');
 
-        var uerrs = Object.keys(unhandled);
+          var uerrs = Object.keys(unhandled);
 
-        for(i=0; i<uerrs.length; i++){
-         console.log(uerrs[i]);
+          for(i=0; i<uerrs.length; i++){
+           console.log(uerrs[i]);
+          }
         }
 
+        //output to text
         if(text){
           var textStream = fs.createWriteStream(text);
           textStream.once('open', function(fd) {
@@ -196,14 +210,18 @@ async.series([
             textStream.write('Number of log entries: ' + totalLogs + '\n');
             textStream.write('Number of ureg errors: ' + uregErrorCount + '\n');
 
-            textStream.write('\nUnhandled Errors Requests\n');
-            for(i=0; i<uerrs.length; i++){
-             textStream.write(uerrs[i] + '\n');
+            if(unhandlederrors){
+              textStream.write('\nUnhandled Errors Requests\n');
+              var uerrs = Object.keys(unhandled);
+              for(i=0; i<uerrs.length; i++){
+               textStream.write(uerrs[i] + '\n');
+              }
             }
             textStream.end();
           });
         }
 
+        //output to csv
         if(csv){
           var csvStream = fs.createWriteStream(csv);
           csvStream.once('open', function(fd) {
@@ -343,17 +361,20 @@ async.series([
             if(foundSoap){
               totalSoap++;
             }
+            else if(!foundSoap && unhandlederrors){
+              var split = logList[i].trim().split('\n', 2);
+
+              if(!(split[0] in unhandled)){
+                unhandled[split[0]] = true;
+               }
+            }
           }
             callback();
         });
 
       }, function done(){
 
-        //Soap Counts
-        // for(i=0; i<soapRequests.length; i++){
-        //  console.log(soapRequests[i].source.replace(/\(\\s\+\)/g  , " ").replace(/\//g, "") + ' --> ' + soapCount[i] );
-        // }
-
+        //results console log
         console.log('\n');
 
         console.log('Total Responses --> ' + soapCount[0]);
@@ -363,7 +384,6 @@ async.series([
 
         //Soap Success Request
         for(i=0; i<regexSuccess.length; i++){
-
 
           if(i<(regexSuccess.length)/2){
             console.log('Response : ' + regexSuccess[i].source.replace(/\//g, "") + ' --> ' + soapRequestCount[i]);
@@ -381,14 +401,17 @@ async.series([
         console.log('Number of log entries: ', totalLogs);
         console.log('Number of soap requests: ', totalSoap);
 
-        console.log('\nUnhandled Soap Requests\n');
+        if(unhandlederrors){
+          console.log('\nUnhandled Soap Requests\n');
 
-        var uerrs = Object.keys(unhandled);
+          var uerrs = Object.keys(unhandled);
 
-        for(i=0; i<uerrs.length; i++){
-         console.log(uerrs[i]);
+          for(i=0; i<uerrs.length; i++){
+           console.log(uerrs[i]);
+          }
         }
 
+        //output to text
         if(text){
           var textStream = fs.createWriteStream(text);
           textStream.once('open', function(fd) {
@@ -417,19 +440,21 @@ async.series([
             textStream.write('Number of log entries: ' + totalLogs + '\n');
             textStream.write('Number of soap requests: ' + totalSoap + '\n');
 
-            textStream.write('\nUnhandled Soap Requests\n');
+            if(unhandlederrors){
 
-            var uerrs = Object.keys(unhandled);
+              textStream.write('\nUnhandled Soap Requests\n');
+              var uerrs = Object.keys(unhandled);
+              for(i=0; i<uerrs.length; i++){
+                textStream.write(uerrs[i] + '\n');
+              }
 
-            for(i=0; i<uerrs.length; i++){
-              textStream.write(uerrs[i] + '\n');
             }
 
             textStream.end();
           });
         }
 
-
+        //output to csv
         if(csv){
           var csvStream = fs.createWriteStream(csv);
           csvStream.once('open', function(fd) {
