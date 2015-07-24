@@ -1,9 +1,11 @@
 var fs = require('fs');
+var fse = require('fs-extended');
 var async  = require('async');
 var prompt = require('prompt');
 var program = require('commander');
 
 var path;
+var recursive;
 var filename;
 var mode;
 var text;
@@ -15,6 +17,7 @@ async.series([
 
     //default values
     path = './';
+    recursive = false;
     filename = 'api';
     mode = 'error';
     text = undefined;
@@ -25,6 +28,7 @@ async.series([
     .version('0.0.1')
     .usage('[options]')
     .option('-p, --path <value>', 'Path to files (default current directory)')
+    .option('-r --recursive', 'Expands all directories recursively (default false)')
     .option('-f, --filename <value>', 'Filename (default api)')
     .option('-m, --mode <value>', 'Mode (default err) [error, success]')
     .option('-t, --text [value]', 'Filename for text output (default output.txt)')
@@ -33,6 +37,7 @@ async.series([
     .parse(process.argv);
 
     if(program.path) path = program.path;
+    if(program.recursive) recursive = program.recursive;
     if(program.filename) filename = program.filename;
     if(program.mode) mode = program.mode;
 
@@ -64,12 +69,19 @@ async.series([
 
       //read all api.out files in current directory
       var apiErrFiles = [];
-      var dirFiles = fs.readdirSync(path);
+      var dirFiles;
+
+      if(recursive){
+        dirFiles = fse.listFilesSync(path, {recursive: recursive});
+      }
+      else{
+        dirFiles = fs.readdirSync(path);
+      }
 
       for(i=0; i<dirFiles.length; i++){
 
-        var outRegex1 = new RegExp("^" + filename + "\.err$");
-        var outRegex2 = new RegExp("^" + filename + "\.err\.[0-9]+$");
+        var outRegex1 = new RegExp("^.*" + filename + "\.err$");
+        var outRegex2 = new RegExp("^.*" + filename + "\.err\.[0-9]+$");
 
         if(dirFiles[i].match(outRegex1) || dirFiles[i].match(outRegex2)){
           apiErrFiles.push(dirFiles[i]);
@@ -262,12 +274,19 @@ async.series([
 
       //read all api.out files in current directory
       var apiOutFiles = [];
-      var dirFiles = fs.readdirSync(path);
+      var dirFiles;
+
+      if(recursive){
+        dirFiles = fse.listFilesSync(path, {recursive: recursive});
+      }
+      else{
+        dirFiles = fs.readdirSync(path);
+      }
 
       for(i=0; i<dirFiles.length; i++){
 
-        var outRegex1 = new RegExp("^" + filename + "\.out$");
-        var outRegex2 = new RegExp("^" + filename + "\.out\.[0-9]+$");
+        var outRegex1 = new RegExp("^.*" + filename + "\.out$");
+        var outRegex2 = new RegExp("^.*" + filename + "\.out\.[0-9]+$");
 
         if(dirFiles[i].match(outRegex1) || dirFiles[i].match(outRegex2)){
           apiOutFiles.push(dirFiles[i]);
