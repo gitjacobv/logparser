@@ -1,14 +1,15 @@
 # logparser
 
-  Usage: uregLogCheck [options]
+Usage: uregLogCheck [options]
 
-  Options:
+Options:
 
-    -h, --help              output usage information
-    -V, --version           output the version number
-    -p, --path <value>      Path to files (default current directory)
-    -f, --filename <value>  Filename (default api)
-    -m, --mode <value>      Mode (default err) [error, success]
-    -t, --text [value]      Filename for text output (default output.txt)
-    -c, --csv [value]       Filename for csv output (default output.csv)
-    -u, --unhandlederrors   Include unhandled errors in printing and output (default not included)
+  -h, --help              output usage information
+  -V, --version           output the version number
+  -p, --path <value>      Path to files (default current directory)
+  -r --recursive          Expands all directories recursively (default false)
+  -f, --filename <value>  Filename (default api)
+  -m, --mode <value>      Mode (default err) [error, success]
+  -t, --text [value]      Filename for text output (default output.txt)
+  -c, --csv [value]       Filename for csv output (default output.csv)
+  -u, --unhandlederrors   Include unhandled errors in printing and output (default not included)
